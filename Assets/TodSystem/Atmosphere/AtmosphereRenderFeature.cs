@@ -79,7 +79,7 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
                 int currentHash = ComputeSettingsHash();
                 if (!_LUTsHasBuilt || currentHash != _lastSettingsHash) 
                 {
-                    RedrawLuts(cmd);
+                    ReDrawLuts(cmd);
                     _lastSettingsHash = currentHash;
                 }
 
@@ -160,7 +160,7 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
             }
         }
 
-        private void RedrawLuts(CommandBuffer cmd)
+        private void ReDrawLuts(CommandBuffer cmd)
         {
             using (new ProfilingScope(cmd, _RedrawLutsSampler))
             {
