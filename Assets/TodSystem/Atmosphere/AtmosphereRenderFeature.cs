@@ -70,27 +70,28 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
         // You don't have to call ScriptableRenderContext.submit, the render pipeline will call it at specific points in the pipeline.
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
-            var cmd = CommandBufferPool.Get("Atmosphere Lut");
+            
+            var cmdbuffer = CommandBufferPool.Get("Atmosphere Lut");
 
-            using (new ProfilingScope(cmd, _ExecuteSampler))
+            using (new ProfilingScope(cmdbuffer, _ExecuteSampler))
             {
-                UploadAtmosphereParams(cmd);
+                UploadAtmosphereParams(cmdbuffer);
 
                 int currentHash = ComputeSettingsHash();
-                if (!_LUTsHasBuilt || currentHash != _lastSettingsHash) 
+                if (!_LUTsHasBuilt || currentHash != _lastSettingsHash)
                 {
-                    ReDrawLuts(cmd);
-                    _lastSettingsHash = currentHash;
+                    ReDrawLuts(cmdbuffer);
+                    _lastSettingsHash = currentHash; 
                 }
 
-                cmd.SetGlobalTexture(_transmittanceLutID, _transmittanceLut.nameID);
-                cmd.SetGlobalTexture(_multiScatteringLutID, _multiScatteringLut.nameID);
-                cmd.SetGlobalTexture(_skyViewLutID, _skyViewLut.nameID);
+                cmdbuffer.SetGlobalTexture(_transmittanceLutID, _transmittanceLut.nameID);
+                cmdbuffer.SetGlobalTexture(_multiScatteringLutID, _multiScatteringLut.nameID);
+                cmdbuffer.SetGlobalTexture(_skyViewLutID, _skyViewLut.nameID);
             }
 
-            context.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
-            CommandBufferPool.Release(cmd);
+            context.ExecuteCommandBuffer(cmdbuffer);
+            cmdbuffer.Clear();
+            CommandBufferPool.Release(cmdbuffer);
         }
 
         // Cleanup any allocated resources that were created during the execution of this render pass.
@@ -162,6 +163,7 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
 
         private void ReDrawLuts(CommandBuffer cmd)
         {
+
             using (new ProfilingScope(cmd, _RedrawLutsSampler))
             {
                 CoreUtils.SetRenderTarget(cmd, _transmittanceLut, ClearFlag.None, Color.clear);
@@ -260,6 +262,7 @@ public class AtmosphereRenderFeature : ScriptableRendererFeature
         {
             return;
         }
+        m_ScriptablePass.AtmosphereSettings = AtmosphereSettings;
         renderer.EnqueuePass(m_ScriptablePass);
     }
 

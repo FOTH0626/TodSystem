@@ -16,8 +16,9 @@ MonoBehaviour:
     debugReplacementPS: {fileID: 4800000, guid: cf852408f2e174538bcd9b7fda1c5ae7,
       type: 3}
     hdrDebugViewPS: {fileID: 4800000, guid: 573620ae32aec764abd4d728906d2587, type: 3}
-  m_RendererFeatures: []
-  m_RendererFeatureMap: 
+  m_RendererFeatures:
+  - {fileID: 4283787301171316769}
+  m_RendererFeatureMap: 2148a59bda11733b
   m_UseNativeRenderPass: 0
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
@@ -66,3 +67,22 @@ MonoBehaviour:
   m_CopyDepthMode: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 1
+--- !u!114 &4283787301171316769
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1722c3564ab24efe85f463ee830ab65a, type: 3}
+  m_Name: AtmosphereRenderFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  AtmosphereSettings: {fileID: 11400000, guid: 088f9866daa3efa4da31d963810b2266, type: 2}
+  transmittanceLutShader: {fileID: 4800000, guid: 601d80e191294cebafa83e163d3968a1,
+    type: 3}
+  multiScatteringLutShader: {fileID: 4800000, guid: c5cfd9599df44d68be423ce4ea6bbbd3,
+    type: 3}
+  skyViewLutShader: {fileID: 4800000, guid: abe1b8b4be6c48e7a24cea3d057a964d, type: 3}

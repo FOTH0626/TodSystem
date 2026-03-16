@@ -2,7 +2,7 @@
 {
     Properties
     {
-        _SourceHdrTexture("Source HDR Texture", 2D) = "white"{}
+//        _SourceHdrTexture("Source HDR Texture", 2D) = "white"{}
     }
     
     SubShader
@@ -10,6 +10,7 @@
         Cull Off
         ZWrite Off
         ZTest Off
+        Blend Off
         
         Pass
         {
@@ -45,7 +46,6 @@
                 return o;
             }
 
-            SAMPLER(sampler_LinearClamp);
             Texture2D _skyViewLut;
             Texture2D _transmittanceLut;
 

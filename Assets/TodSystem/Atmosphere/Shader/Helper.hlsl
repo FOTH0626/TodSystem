@@ -8,17 +8,18 @@
 
 float RayIntersectSphereLength(float3 center, float radius, float3 rayOrigin, float3 rayDirection)
 {
+    //O代表光线原点，S表示球心，H表示球心向光线引垂线交点，P代表交点，画图理解
     float OS = length(center - rayOrigin);
-    float SH = dot(center - rayOrigin, rayDirection);
-    float OH = sqrt(OS*OS - SH*SH);
-    float PH = sqrt(radius*radius - OH*OH);
+    float OH = dot(center - rayOrigin, rayDirection);
+    float SH = sqrt(OS*OS - OH*OH);
+    float PH = sqrt(radius*radius - SH*SH);
 
     // ray miss sphere
-    if(OH > radius) return -1;
+    if(SH > radius) return -1;
 
     // use min distance
-    float t1 = SH - PH;
-    float t2 = SH + PH;
+    float t1 = OH - PH;
+    float t2 = OH + PH;
     float t = (t1 < 0) ? t2 : t1;
 
     return t;

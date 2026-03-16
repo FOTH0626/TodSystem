@@ -24,6 +24,6 @@ MonoBehaviour:
   mieAnisotropy: 0.8
   mieScatteringScalarHeight: 1200
   ozoneAbsorptionScale: 1
-  ozoneLevelCenterHeight: 25000
+  ozoneLevelCenterHeight: 24990
   ozoneLevelWidth: 15000
   aerialPerspectiveDistance: 32000

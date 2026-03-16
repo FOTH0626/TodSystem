@@ -25,6 +25,7 @@ float3 Transmittance( in AtmosphereParams params, float3 position1, float3 posit
     {
         float height = length(sample_position) - params.PlanetRadius;
 
+        //瑞利散射不发生吸收，但臭氧会吸收
         float3 scattering = RayleighCoefficient(params, height) + MieCoefficient(params, height);
         float3 absorption = MieAbsorption(params, height) + OzoneAbsorption(params, height);
 
@@ -36,7 +37,7 @@ float3 Transmittance( in AtmosphereParams params, float3 position1, float3 posit
 
     return exp(-sum);
 }
-
+//计算任意position沿direction到大气上届的transmiitance
 float3 TransmittanceToAtmosphereByLut(in AtmosphereParams params, float3 position, float3 direction, Texture2D lut, SamplerState spl)
 {
     float bottomRadius = params.PlanetRadius;

@@ -7,39 +7,52 @@
         Cull Off
         ZWrite Off
         ZTest Always
+        Blend Off
         
         Pass
         {
             HLSLPROGRAM
+            #pragma vertex Vert
+            #pragma fragment Frag
 
-            #pragma vertex vert
-            #pragma  fragment frag
-
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Transmittance.hlsl"
             #include "Helper.hlsl"
             
-            struct appdata
+            struct Attributes
             {
-                float4 vertex : POSITION;
-                float2 uv : TEXCOORD0;
+                uint vertexID : SV_VertexID;
+            };
+            
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv         : TEXCOORD0;
             };
 
-            struct  v2f
+            Varyings Vert(Attributes input)
             {
-                float2 uv : TEXCOORD0;
-                float4 vertex : SV_POSITION;
-            };
+                Varyings o;
 
-            v2f vert (appdata input )
-            {
-                v2f output;
-                output.uv = input.uv;
-                output.vertex = TransformObjectToHClip(input.vertex);
-                return output;
+                if (input.vertexID == 0)
+                {
+                    o.positionCS = float4(-1.0, 1.0, 0.0, 1.0);
+                    o.uv = float2(0.0, 0.0);
+                }
+                else if (input.vertexID == 1)
+                {
+                    o.positionCS = float4(-1.0, -3.0, 0.0, 1.0);
+                    o.uv = float2(0.0, 2.0);
+                }
+                else
+                {
+                    o.positionCS = float4( 3.0, 1.0, 0.0, 1.0);
+                    o.uv = float2(2.0, 0.0);
+                }
+                //这时，屏幕左下角uv为（0,0），右上角uv为（1,1）
+                return o;
             }
 
-            float4 frag ( v2f input ): SV_Target
+            float4 Frag ( Varyings input ): SV_Target
             {
                 AtmosphereParams params = GetAtmosphereParameter();
 
@@ -62,9 +75,10 @@
                 float3 hitPoint = eyePos + distance * viewDir;
 
                 color.rgb = Transmittance(params, eyePos,hitPoint);
-
                 
-                return  color;
+                //return float4(uv,0,1);
+                return color;
+
             }    
             
             ENDHLSL
