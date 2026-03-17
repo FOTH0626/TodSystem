@@ -9,7 +9,7 @@
     {
         Cull Off
         ZWrite Off
-        ZTest Off
+        ZTest On
         Blend Off
         
         Pass
@@ -25,25 +25,24 @@
             #include "Transmittance.hlsl"
             #include "Helper.hlsl"
 
-            struct appdata
+            struct Attributes
             {
                 float4 vertex : POSITION;
                 float2 uv : TEXCOORD0 ;
-                
             };
 
-            struct v2f
+            struct Varyings
             {
                 float4 vertex : SV_POSITION;
-                float3 worldPos : SEMANTIC_HELLO_WORLD;
+                float3 worldPos : WORLD_POS;
             };
 
-            v2f vert(appdata input )
+            Varyings vert(Attributes input )
             {
-                v2f o ;
-                o.vertex = TransformObjectToHClip(input.vertex);
-                o.worldPos = TransformObjectToWorld(input.vertex.xyz);
-                return o;
+                Varyings output ;
+                output.vertex = TransformObjectToHClip(input.vertex);
+                output.worldPos = TransformObjectToWorld(input.vertex.xyz);
+                return output;
             }
 
             Texture2D _skyViewLut;
@@ -72,12 +71,12 @@
                 return float3(0,0,0);
             }
 
-            float4 frag (v2f i ) :SV_Target
+            float4 frag (Varyings input ) :SV_Target
             {
                 AtmosphereParams params = GetAtmosphereParameter();
 
                 float3 color = float3(0,0,0);
-                float3 viewDir = normalize(i.worldPos);
+                float3 viewDir = normalize(input.worldPos);
 
                 Light mainLight = GetMainLight();
 

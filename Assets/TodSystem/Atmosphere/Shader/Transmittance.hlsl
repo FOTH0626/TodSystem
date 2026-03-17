@@ -37,7 +37,7 @@ float3 Transmittance( in AtmosphereParams params, float3 position1, float3 posit
 
     return exp(-sum);
 }
-//计算任意position沿direction到大气上届的transmiitance
+//查表计算任意position沿direction到大气上届的transmiitance
 float3 TransmittanceToAtmosphereByLut(in AtmosphereParams params, float3 position, float3 direction, Texture2D lut, SamplerState spl)
 {
     float bottomRadius = params.PlanetRadius;

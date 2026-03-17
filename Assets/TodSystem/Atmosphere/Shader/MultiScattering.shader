@@ -10,7 +10,6 @@
         ZWrite Off
         ZTest Always
         Blend Off
-        
 
         Pass
         {

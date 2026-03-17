@@ -18,7 +18,8 @@ MonoBehaviour:
     hdrDebugViewPS: {fileID: 4800000, guid: 573620ae32aec764abd4d728906d2587, type: 3}
   m_RendererFeatures:
   - {fileID: 4283787301171316769}
-  m_RendererFeatureMap: 2148a59bda11733b
+  - {fileID: 5408130234697498884}
+  m_RendererFeatureMap: 2148a59bda11733b04c13182cb890d4b
   m_UseNativeRenderPass: 0
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
@@ -86,3 +87,20 @@ MonoBehaviour:
   multiScatteringLutShader: {fileID: 4800000, guid: c5cfd9599df44d68be423ce4ea6bbbd3,
     type: 3}
   skyViewLutShader: {fileID: 4800000, guid: abe1b8b4be6c48e7a24cea3d057a964d, type: 3}
+  aerialPerspectiveLutShader: {fileID: 4800000, guid: 112a374b8faa4711ae14ecbd2b56ca86,
+    type: 3}
+--- !u!114 &5408130234697498884
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b518d3d16d9dc9c4298e5908151fc869, type: 3}
+  m_Name: AerialPerspectiveRenderFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  aerialPerspectiveShader: {fileID: 4800000, guid: a7fcfc4f9b3a4919bcc4ed97bfacfdf0,
+    type: 3}

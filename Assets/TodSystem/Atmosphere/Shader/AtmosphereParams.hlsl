@@ -15,7 +15,6 @@ float _MieScatteringScalarHeight;
 float _OzoneAbsorptionScale;
 float _OzoneLevelCenterHeight;
 float _OzoneLevelWidth;
-float _AerialPerspectiveDistance;
 
 struct AtmosphereParams
 {

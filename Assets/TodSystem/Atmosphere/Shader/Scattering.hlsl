@@ -10,7 +10,7 @@ float3 RayleighCoefficient(in AtmosphereParams params, float height)
     const float3 sigma = float3(5.802, 13.558, 33.1) * 1e-6;
     float scalarHeight = params.RayleighScatteringScalarHeight;
     float rho_h = exp(-(height / scalarHeight));
-    return sigma * rho_h;
+    return sigma * rho_h * params.RayleighScatteringScale;
 }
 //瑞利散射相位函数
 float RayleighPhase(float cos_theta)
@@ -23,7 +23,7 @@ float3 MieCoefficient(in AtmosphereParams params, float height)
     const float3 sigma = (3.996 * 1e-6).xxx;
     float scalarHeight = params.MieScatteringScalarHeight;
     float rho_h = exp(-(height/scalarHeight));
-    return sigma * rho_h;
+    return sigma * rho_h * params.MieScatteringScale;
 }
 //米氏散射相位函数
 float MiePhase(in AtmosphereParams param, float cos_theta)
@@ -52,21 +52,21 @@ float3 ScatteringOnPoint(in AtmosphereParams params, float3 position, float3 inD
     
 }
 //米氏散射吸收
-float3 MieAbsorption(in AtmosphereParams param, float height)
+float3 MieAbsorption(in AtmosphereParams params, float height)
 {
     const float3 sigma = (4.4 * 1e-6).xxx;
-    float H_M = param.MieScatteringScalarHeight;
+    float H_M = params.MieScatteringScalarHeight;
     float rho_h = exp(-(height / H_M));
     return sigma * rho_h;
 }
 //臭氧层的吸收
-float3 OzoneAbsorption(in AtmosphereParams param, float height)
+float3 OzoneAbsorption(in AtmosphereParams params, float height)
 {
     const float3 sigma_ozone = (float3(0.650f, 1.881f, 0.085f)) * 1e-6;
-    float center = param.OzoneLevelCenterHeight;
-    float width = param.OzoneLevelWidth;
+    float center = params.OzoneLevelCenterHeight;
+    float width = params.OzoneLevelWidth;
     float rho = max(0, 1.0 - (abs(height - center) / width));
-    return sigma_ozone * rho;
+    return sigma_ozone * rho * params.OzoneAbsorptionScale;
 }
 
 

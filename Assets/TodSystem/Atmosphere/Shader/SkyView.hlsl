@@ -34,7 +34,7 @@ float3 GetSkyView(in AtmosphereParams params,
     float3 opticalDepth = float3(0,0,0);
 
     for (int i = 0; i < N_SAMPLE; i++)
-    {
+    {   
         float height = length(p) - params.PlanetRadius;
         float3 extinction = RayleighCoefficient(params, height) + MieCoefficient(params, height) +
                             OzoneAbsorption(params, height) + MieAbsorption(params, height);

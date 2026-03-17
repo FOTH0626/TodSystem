@@ -74,7 +74,6 @@
                 Light mainLight = GetMainLight();
                 float3 lightDir = mainLight.direction;
                 
-
                 
                 float h = _WorldSpaceCameraPos.y - params.SeaLevel + params.PlanetRadius;
                 float3 eyePos = float3(0, h, 0);
