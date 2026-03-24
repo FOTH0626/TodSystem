@@ -1,4 +1,4 @@
-﻿Shader "Atmosphere/MultiScatteringLut"
+﻿Shader "TOD/Atmosphere/MultiScatteringLut"
 {
     Properties
     {

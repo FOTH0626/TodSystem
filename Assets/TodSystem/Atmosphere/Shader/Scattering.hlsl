@@ -70,5 +70,19 @@ float3 OzoneAbsorption(in AtmosphereParams params, float height)
 }
 
 
+// See http://www.pbr-book.org/3ed-2018/Volume_Scattering/Phase_Functions.html
+float hgPhase(float g, float cosTheta)
+{
+    float numer = 1.0f - g * g;
+    float denom = 1.0f + g * g + 2.0f * g * cosTheta;
+    return numer / (4.0f * PI * denom * sqrt(denom));
+}
+
+float dualLobPhase(float g0, float g1, float w, float cosTheta)
+{
+    return lerp(hgPhase(g0, cosTheta), hgPhase(g1, cosTheta), w);
+}
+
+
 
 #endif

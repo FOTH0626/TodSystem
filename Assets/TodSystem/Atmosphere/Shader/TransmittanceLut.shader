@@ -1,4 +1,4 @@
-﻿Shader "Atmosphere/TransmittanceLut"
+﻿Shader "TOD/Atmosphere/TransmittanceLut"
 {
     Properties {}
     

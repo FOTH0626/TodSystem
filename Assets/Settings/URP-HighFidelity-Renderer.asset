@@ -1,5 +1,19 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-5430366581852173639
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b9e1f22ef2f40da87d1ae6b188deded, type: 3}
+  m_Name: VolumetricCloudRenderFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  volumetricCloudMat: {fileID: 2100000, guid: ec35f44d8960df349ba2a18e9188c522, type: 2}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19,7 +33,8 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: 4283787301171316769}
   - {fileID: 5408130234697498884}
-  m_RendererFeatureMap: 2148a59bda11733b04c13182cb890d4b
+  - {fileID: -5430366581852173639}
+  m_RendererFeatureMap: 2148a59bda11733b04c13182cb890d4bb98a8c785d76a3b4
   m_UseNativeRenderPass: 0
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
@@ -101,6 +116,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b518d3d16d9dc9c4298e5908151fc869, type: 3}
   m_Name: AerialPerspectiveRenderFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   aerialPerspectiveShader: {fileID: 4800000, guid: a7fcfc4f9b3a4919bcc4ed97bfacfdf0,
     type: 3}
+--- !u!114 &7507495812339050458
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b9e1f22ef2f40da87d1ae6b188deded, type: 3}
+  m_Name: VolumetricCloudRenderFeature
+  m_EditorClassIdentifier: 
+  m_Active: 0
+  volumetricCloudMat: {fileID: 0}

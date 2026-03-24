@@ -1,4 +1,4 @@
-﻿Shader "Atmosphere/Skybox"
+﻿Shader "TOD/Atmosphere/Skybox"
 {
     Properties
     {

@@ -1,4 +1,4 @@
-﻿Shader "Atmosphere/SkyViewLut"
+﻿Shader "TOD/Atmosphere/SkyViewLut"
 {
     
     Properties
