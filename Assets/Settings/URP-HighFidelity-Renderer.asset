@@ -32,9 +32,9 @@ MonoBehaviour:
     hdrDebugViewPS: {fileID: 4800000, guid: 573620ae32aec764abd4d728906d2587, type: 3}
   m_RendererFeatures:
   - {fileID: 4283787301171316769}
-  - {fileID: 5408130234697498884}
   - {fileID: -5430366581852173639}
-  m_RendererFeatureMap: 2148a59bda11733b04c13182cb890d4bb98a8c785d76a3b4
+  - {fileID: 5408130234697498884}
+  m_RendererFeatureMap: 2148a59bda11733bb98a8c785d76a3b404c13182cb890d4b
   m_UseNativeRenderPass: 0
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
@@ -116,7 +116,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b518d3d16d9dc9c4298e5908151fc869, type: 3}
   m_Name: AerialPerspectiveRenderFeature
   m_EditorClassIdentifier: 
-  m_Active: 0
+  m_Active: 1
   aerialPerspectiveShader: {fileID: 4800000, guid: a7fcfc4f9b3a4919bcc4ed97bfacfdf0,
     type: 3}
 --- !u!114 &7507495812339050458

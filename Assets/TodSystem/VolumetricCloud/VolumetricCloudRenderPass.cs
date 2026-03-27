@@ -13,6 +13,7 @@ public class VolumetricCloudRenderPass : ScriptableRenderPass
 
     #region parameters
 
+    private static readonly int CloudMapSize = Shader.PropertyToID("_CloudMapSize");
     private static readonly int CloudLayerLowHeight = Shader.PropertyToID("_CloudLayerLowHeight");
     private static readonly int CloudLayerHighHeight = Shader.PropertyToID("_CloudLayerHighHeight");
     private static readonly int RayMarchingSteps = Shader.PropertyToID("_RayMarchingSteps");
@@ -28,6 +29,7 @@ public class VolumetricCloudRenderPass : ScriptableRenderPass
     {
         _volumetricCloudMaterial = mat;
         _volume = volume;
+        ConfigureInput(ScriptableRenderPassInput.Depth);
     }
 
     public override void Configure(CommandBuffer cmd, RenderTextureDescriptor cameraTextureDescriptor)
@@ -71,6 +73,7 @@ public class VolumetricCloudRenderPass : ScriptableRenderPass
 
     private void UpdateMaterialParameters()
     {
+        _volumetricCloudMaterial.SetFloat(CloudMapSize,_volume.CloudMapSize.value);
         _volumetricCloudMaterial.SetFloat(CloudLayerLowHeight, _volume.CloudLayerLowHeight.value);
         _volumetricCloudMaterial.SetFloat(CloudLayerHighHeight, _volume.CloudLayerHighHeight.value);
         _volumetricCloudMaterial.SetInt(RayMarchingSteps, _volume.RayMarchingSteps.value);
@@ -92,5 +95,10 @@ public class VolumetricCloudRenderPass : ScriptableRenderPass
         _volume = volume;
     }
 
+    public void Dispose()
+    {
+        _tempColor.Release();
+        // _cameraColor.Release();
+    }
 
 }

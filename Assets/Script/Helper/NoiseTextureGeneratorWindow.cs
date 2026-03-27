@@ -33,7 +33,9 @@ namespace TodSystem.Helper
             FbmWorley,
             FbmOneMinusWorley,
             SimplexFbmOneMinusWorley,
-            FbmSimplexOneMinusFbmWorley
+            FbmSimplexOneMinusFbmWorley,
+            [InspectorName("S-W噪声")]
+            SWNoise
         }
 
         private enum OutputMode
@@ -162,7 +164,7 @@ namespace TodSystem.Helper
                 EditorGUILayout.HelpBox("3D mode generates full volume noise. Offset.z shifts the whole volume depth.", MessageType.Info);
                 if (_noise3DExportMode == Noise3DExportMode.Unwrapped2D)
                 {
-                    EditorGUILayout.HelpBox("Unwrapped 2D size is (Width * Depth, Height).", MessageType.None);
+                    EditorGUILayout.HelpBox("Unwrapped 2D size is (Width * Depth, Height). Visible vertical boundaries between slices are expected in the atlas; seamless wrapping happens in the 3D volume, especially from the last slice back to the first slice on Z.", MessageType.None);
                 }
             }
 
@@ -279,7 +281,8 @@ namespace TodSystem.Helper
             return noiseType == NoiseType.FbmWorley ||
                    noiseType == NoiseType.FbmOneMinusWorley ||
                    noiseType == NoiseType.SimplexFbmOneMinusWorley ||
-                   noiseType == NoiseType.FbmSimplexOneMinusFbmWorley;
+                   noiseType == NoiseType.FbmSimplexOneMinusFbmWorley ||
+                   noiseType == NoiseType.SWNoise;
         }
 
         private static FbmWorleySettings SanitizeFbmSettings(FbmWorleySettings settings)
@@ -296,7 +299,7 @@ namespace TodSystem.Helper
         {
             Texture2D texture = new Texture2D(_width, _height, TextureFormat.RGBA32, false, true)
             {
-                wrapMode = TextureWrapMode.Clamp,
+                wrapMode = TextureWrapMode.Repeat,
                 filterMode = FilterMode.Bilinear
             };
 
@@ -304,10 +307,10 @@ namespace TodSystem.Helper
 
             for (int y = 0; y < _height; y++)
             {
-                float v = _height == 1 ? 0f : (float)y / (_height - 1);
+                float v = GetTileCoordinate(y, _height);
                 for (int x = 0; x < _width; x++)
                 {
-                    float u = _width == 1 ? 0f : (float)x / (_width - 1);
+                    float u = GetTileCoordinate(x, _width);
                     pixels[y * _width + x] = SamplePixel(u, v, 0f);
                 }
             }
@@ -346,15 +349,15 @@ namespace TodSystem.Helper
             Color[] pixels = new Color[unwrapWidth * _height];
             for (int z = 0; z < _depth; z++)
             {
-                float w = _depth == 1 ? 0f : (float)z / (_depth - 1);
+                float w = GetTileCoordinate(z, _depth);
                 int sliceXOffset = z * _width;
                 for (int y = 0; y < _height; y++)
                 {
-                    float v = _height == 1 ? 0f : (float)y / (_height - 1);
+                    float v = GetTileCoordinate(y, _height);
                     int rowOffset = y * unwrapWidth + sliceXOffset;
                     for (int x = 0; x < _width; x++)
                     {
-                        float u = _width == 1 ? 0f : (float)x / (_width - 1);
+                        float u = GetTileCoordinate(x, _width);
                         pixels[rowOffset + x] = SamplePixel(u, v, w);
                     }
                 }
@@ -401,22 +404,22 @@ namespace TodSystem.Helper
 
             Texture3D texture = new Texture3D(_width, _height, _depth, TextureFormat.RGBA32, false)
             {
-                wrapMode = TextureWrapMode.Clamp,
+                wrapMode = TextureWrapMode.Repeat,
                 filterMode = FilterMode.Bilinear
             };
 
             Color[] voxels = new Color[_width * _height * _depth];
             for (int z = 0; z < _depth; z++)
             {
-                float w = _depth == 1 ? 0f : (float)z / (_depth - 1);
+                float w = GetTileCoordinate(z, _depth);
                 int zOffset = z * _width * _height;
                 for (int y = 0; y < _height; y++)
                 {
-                    float v = _height == 1 ? 0f : (float)y / (_height - 1);
+                    float v = GetTileCoordinate(y, _height);
                     int yOffset = y * _width;
                     for (int x = 0; x < _width; x++)
                     {
-                        float u = _width == 1 ? 0f : (float)x / (_width - 1);
+                        float u = GetTileCoordinate(x, _width);
                         voxels[zOffset + yOffset + x] = SamplePixel(u, v, w);
                     }
                 }
@@ -458,58 +461,400 @@ namespace TodSystem.Helper
             float x = (u + _offset.x) * _frequency;
             float y = (v + _offset.y) * _frequency;
             float z = (w + _offset.z) * _frequency;
+            float periodX = Mathf.Max(_frequency, 0.0001f);
+            float periodY = Mathf.Max(_frequency, 0.0001f);
+            float periodZ = Mathf.Max(_frequency, 0.0001f);
 
+            if (_noiseDimension == NoiseDimension.Noise2D)
+            {
+                return Mathf.Clamp01(SampleNoise2DInternal(noiseType, x, y, periodX, periodY, fbmSettings));
+            }
+
+            return Mathf.Clamp01(SampleNoise3DInternal(noiseType, x, y, z, periodX, periodY, periodZ, fbmSettings));
+        }
+
+        private float SampleNoise2DInternal(NoiseType noiseType, float x, float y, float periodX, float periodY, FbmWorleySettings fbmSettings)
+        {
             if (noiseType == NoiseType.FbmWorley)
             {
                 FbmWorleySettings settings = SanitizeFbmSettings(fbmSettings);
-                if (_noiseDimension == NoiseDimension.Noise2D)
-                {
-                    return Mathf.Clamp01(SampleFbmWorley2D(x, y, settings));
-                }
-
-                return Mathf.Clamp01(SampleFbmWorley3D(x, y, z, settings));
+                return SampleFbmWorleyTileable2D(x, y, periodX, periodY, settings);
             }
 
             if (noiseType == NoiseType.FbmOneMinusWorley)
             {
                 FbmWorleySettings settings = SanitizeFbmSettings(fbmSettings);
-                if (_noiseDimension == NoiseDimension.Noise2D)
-                {
-                    return Mathf.Clamp01(SampleFbmOneMinusWorley2D(x, y, settings));
-                }
-
-                return Mathf.Clamp01(SampleFbmOneMinusWorley3D(x, y, z, settings));
+                return SampleFbmOneMinusWorleyTileable2D(x, y, periodX, periodY, settings);
             }
 
             if (noiseType == NoiseType.SimplexFbmOneMinusWorley)
             {
                 FbmWorleySettings settings = SanitizeFbmSettings(fbmSettings);
-                if (_noiseDimension == NoiseDimension.Noise2D)
-                {
-                    return Mathf.Clamp01(SampleSimplexFbmOneMinusWorley2D(x, y, settings));
-                }
-
-                return Mathf.Clamp01(SampleSimplexFbmOneMinusWorley3D(x, y, z, settings));
+                return SampleSimplexFbmOneMinusWorleyTileable2D(x, y, periodX, periodY, settings);
             }
 
             if (noiseType == NoiseType.FbmSimplexOneMinusFbmWorley)
             {
                 FbmWorleySettings settings = SanitizeFbmSettings(fbmSettings);
-                if (_noiseDimension == NoiseDimension.Noise2D)
-                {
-                    return Mathf.Clamp01(SampleFbmSimplexOneMinusFbmWorley2D(x, y, settings));
-                }
+                return SampleFbmSimplexOneMinusFbmWorleyTileable2D(x, y, periodX, periodY, settings);
+            }
 
-                return Mathf.Clamp01(SampleFbmSimplexOneMinusFbmWorley3D(x, y, z, settings));
+            if (noiseType == NoiseType.SWNoise)
+            {
+                FbmWorleySettings settings = SanitizeFbmSettings(fbmSettings);
+                return SampleSWNoiseTileable2D(x, y, periodX, periodY, settings);
             }
 
             NoiseProvider provider = NoiseProviders[noiseType];
-            if (_noiseDimension == NoiseDimension.Noise2D)
+            return SampleTileable2D(provider.Sample2D, x, y, periodX, periodY);
+        }
+
+        private float SampleNoise3DInternal(NoiseType noiseType, float x, float y, float z, float periodX, float periodY, float periodZ, FbmWorleySettings fbmSettings)
+        {
+            if (noiseType == NoiseType.FbmWorley)
             {
-                return Mathf.Clamp01(provider.Sample2D(x, y));
+                FbmWorleySettings settings = SanitizeFbmSettings(fbmSettings);
+                return SampleFbmWorleyTileable3D(x, y, z, periodX, periodY, periodZ, settings);
             }
 
-            return Mathf.Clamp01(provider.Sample3D(x, y, z));
+            if (noiseType == NoiseType.FbmOneMinusWorley)
+            {
+                FbmWorleySettings settings = SanitizeFbmSettings(fbmSettings);
+                return SampleFbmOneMinusWorleyTileable3D(x, y, z, periodX, periodY, periodZ, settings);
+            }
+
+            if (noiseType == NoiseType.SimplexFbmOneMinusWorley)
+            {
+                FbmWorleySettings settings = SanitizeFbmSettings(fbmSettings);
+                return SampleSimplexFbmOneMinusWorleyTileable3D(x, y, z, periodX, periodY, periodZ, settings);
+            }
+
+            if (noiseType == NoiseType.FbmSimplexOneMinusFbmWorley)
+            {
+                FbmWorleySettings settings = SanitizeFbmSettings(fbmSettings);
+                return SampleFbmSimplexOneMinusFbmWorleyTileable3D(x, y, z, periodX, periodY, periodZ, settings);
+            }
+
+            if (noiseType == NoiseType.SWNoise)
+            {
+                FbmWorleySettings settings = SanitizeFbmSettings(fbmSettings);
+                return SampleSWNoiseTileable3D(x, y, z, periodX, periodY, periodZ, settings);
+            }
+
+            NoiseProvider provider = NoiseProviders[noiseType];
+            return SampleTileable3D(provider.Sample3D, x, y, z, periodX, periodY, periodZ);
+        }
+
+        private static float SampleTileable2D(Func<float, float, float> sampler, float x, float y, float periodX, float periodY)
+        {
+            float blendX = Mathf.Repeat(x, periodX) / periodX;
+            float blendY = Mathf.Repeat(y, periodY) / periodY;
+
+            float s00 = sampler(x, y);
+            float s10 = sampler(x - periodX, y);
+            float s01 = sampler(x, y - periodY);
+            float s11 = sampler(x - periodX, y - periodY);
+
+            float sx0 = Mathf.Lerp(s00, s10, blendX);
+            float sx1 = Mathf.Lerp(s01, s11, blendX);
+            return Mathf.Lerp(sx0, sx1, blendY);
+        }
+
+        private static float SampleTileable3D(Func<float, float, float, float> sampler, float x, float y, float z, float periodX, float periodY, float periodZ)
+        {
+            float blendX = Mathf.Repeat(x, periodX) / periodX;
+            float blendY = Mathf.Repeat(y, periodY) / periodY;
+            float blendZ = Mathf.Repeat(z, periodZ) / periodZ;
+
+            float s000 = sampler(x, y, z);
+            float s100 = sampler(x - periodX, y, z);
+            float s010 = sampler(x, y - periodY, z);
+            float s110 = sampler(x - periodX, y - periodY, z);
+            float s001 = sampler(x, y, z - periodZ);
+            float s101 = sampler(x - periodX, y, z - periodZ);
+            float s011 = sampler(x, y - periodY, z - periodZ);
+            float s111 = sampler(x - periodX, y - periodY, z - periodZ);
+
+            float sx00 = Mathf.Lerp(s000, s100, blendX);
+            float sx10 = Mathf.Lerp(s010, s110, blendX);
+            float sx01 = Mathf.Lerp(s001, s101, blendX);
+            float sx11 = Mathf.Lerp(s011, s111, blendX);
+            float sy0 = Mathf.Lerp(sx00, sx10, blendY);
+            float sy1 = Mathf.Lerp(sx01, sx11, blendY);
+            return Mathf.Lerp(sy0, sy1, blendZ);
+        }
+
+        private static float SampleFbmWorleyTileable2D(float x, float y, float periodX, float periodY, FbmWorleySettings settings)
+        {
+            float fbm = SampleFbmSimplexTileable2D(
+                x * settings.BaseFrequencyScale,
+                y * settings.BaseFrequencyScale,
+                periodX * settings.BaseFrequencyScale,
+                periodY * settings.BaseFrequencyScale,
+                settings);
+            float oneMinusWorley = SampleTileable2D(
+                SampleOneMinusWorley2D,
+                x * settings.WorleyFrequencyScale,
+                y * settings.WorleyFrequencyScale,
+                periodX * settings.WorleyFrequencyScale,
+                periodY * settings.WorleyFrequencyScale);
+            return Remap(fbm, oneMinusWorley, 1f, 0f, 1f);
+        }
+
+        private static float SampleFbmOneMinusWorleyTileable2D(float x, float y, float periodX, float periodY, FbmWorleySettings settings)
+        {
+            float value = 0f;
+            float amplitude = 1f;
+            float frequency = 1f;
+            float amplitudeSum = 0f;
+
+            for (int i = 0; i < settings.Octaves; i++)
+            {
+                value += SampleTileable2D(
+                    SampleOneMinusWorley2D,
+                    x * settings.WorleyFrequencyScale * frequency,
+                    y * settings.WorleyFrequencyScale * frequency,
+                    periodX * settings.WorleyFrequencyScale * frequency,
+                    periodY * settings.WorleyFrequencyScale * frequency) * amplitude;
+                amplitudeSum += amplitude;
+                amplitude *= settings.Gain;
+                frequency *= settings.Lacunarity;
+            }
+
+            return amplitudeSum <= 0f ? 0f : value / amplitudeSum;
+        }
+
+        private static float SampleSWNoiseTileable2D(float x, float y, float periodX, float periodY, FbmWorleySettings settings)
+        {
+            float fbmSimplex = SampleFbmSimplexTileable2D(
+                x * settings.BaseFrequencyScale,
+                y * settings.BaseFrequencyScale,
+                periodX * settings.BaseFrequencyScale,
+                periodY * settings.BaseFrequencyScale,
+                settings);
+            float fbmOneMinusWorley = SampleFbmOneMinusWorleyTileable2D(x, y, periodX, periodY, settings);
+            return Remap(fbmSimplex, fbmOneMinusWorley, 1f, 0f, 1f);
+        }
+
+        private static float SampleSimplexFbmOneMinusWorleyTileable2D(float x, float y, float periodX, float periodY, FbmWorleySettings settings)
+        {
+            float simplex = SampleTileable2D(
+                SampleSimplex2D,
+                x * settings.BaseFrequencyScale,
+                y * settings.BaseFrequencyScale,
+                periodX * settings.BaseFrequencyScale,
+                periodY * settings.BaseFrequencyScale);
+            float fbmOneMinusWorley = SampleFbmOneMinusWorleyTileable2D(x, y, periodX, periodY, settings);
+            return Remap(simplex, 1f - fbmOneMinusWorley, 1f, 0f, 1f);
+        }
+
+        private static float SampleFbmSimplexOneMinusFbmWorleyTileable2D(float x, float y, float periodX, float periodY, FbmWorleySettings settings)
+        {
+            float fbmSimplex = SampleFbmSimplexTileable2D(
+                x * settings.BaseFrequencyScale,
+                y * settings.BaseFrequencyScale,
+                periodX * settings.BaseFrequencyScale,
+                periodY * settings.BaseFrequencyScale,
+                settings);
+            float fbmWorley = SampleFbmWorleyRawTileable2D(
+                x * settings.WorleyFrequencyScale,
+                y * settings.WorleyFrequencyScale,
+                periodX * settings.WorleyFrequencyScale,
+                periodY * settings.WorleyFrequencyScale,
+                settings);
+
+            return Remap(fbmSimplex, fbmWorley, 1f, 0f, 1f);
+        }
+
+        private static float SampleFbmSimplexTileable2D(float x, float y, float periodX, float periodY, FbmWorleySettings settings)
+        {
+            float value = 0f;
+            float amplitude = 1f;
+            float frequency = 1f;
+            float amplitudeSum = 0f;
+
+            for (int i = 0; i < settings.Octaves; i++)
+            {
+                value += SampleTileable2D(
+                    SampleSimplex2D,
+                    x * frequency,
+                    y * frequency,
+                    periodX * frequency,
+                    periodY * frequency) * amplitude;
+                amplitudeSum += amplitude;
+                amplitude *= settings.Gain;
+                frequency *= settings.Lacunarity;
+            }
+
+            return amplitudeSum <= 0f ? 0f : value / amplitudeSum;
+        }
+
+        private static float SampleFbmWorleyRawTileable2D(float x, float y, float periodX, float periodY, FbmWorleySettings settings)
+        {
+            float value = 0f;
+            float amplitude = 1f;
+            float frequency = 1f;
+            float amplitudeSum = 0f;
+
+            for (int i = 0; i < settings.Octaves; i++)
+            {
+                value += SampleTileable2D(
+                    SampleWorley2D,
+                    x * frequency,
+                    y * frequency,
+                    periodX * frequency,
+                    periodY * frequency) * amplitude;
+                amplitudeSum += amplitude;
+                amplitude *= settings.Gain;
+                frequency *= settings.Lacunarity;
+            }
+
+            return amplitudeSum <= 0f ? 0f : value / amplitudeSum;
+        }
+
+        private static float SampleFbmWorleyTileable3D(float x, float y, float z, float periodX, float periodY, float periodZ, FbmWorleySettings settings)
+        {
+            float fbm = SampleFbmSimplexTileable3D(
+                x * settings.BaseFrequencyScale,
+                y * settings.BaseFrequencyScale,
+                z * settings.BaseFrequencyScale,
+                periodX * settings.BaseFrequencyScale,
+                periodY * settings.BaseFrequencyScale,
+                periodZ * settings.BaseFrequencyScale,
+                settings);
+            float oneMinusWorley = SampleTileable3D(
+                SampleOneMinusWorley3D,
+                x * settings.WorleyFrequencyScale,
+                y * settings.WorleyFrequencyScale,
+                z * settings.WorleyFrequencyScale,
+                periodX * settings.WorleyFrequencyScale,
+                periodY * settings.WorleyFrequencyScale,
+                periodZ * settings.WorleyFrequencyScale);
+            return Remap(fbm, oneMinusWorley, 1f, 0f, 1f);
+        }
+
+        private static float SampleFbmOneMinusWorleyTileable3D(float x, float y, float z, float periodX, float periodY, float periodZ, FbmWorleySettings settings)
+        {
+            float value = 0f;
+            float amplitude = 1f;
+            float frequency = 1f;
+            float amplitudeSum = 0f;
+
+            for (int i = 0; i < settings.Octaves; i++)
+            {
+                value += SampleTileable3D(
+                    SampleOneMinusWorley3D,
+                    x * settings.WorleyFrequencyScale * frequency,
+                    y * settings.WorleyFrequencyScale * frequency,
+                    z * settings.WorleyFrequencyScale * frequency,
+                    periodX * settings.WorleyFrequencyScale * frequency,
+                    periodY * settings.WorleyFrequencyScale * frequency,
+                    periodZ * settings.WorleyFrequencyScale * frequency) * amplitude;
+                amplitudeSum += amplitude;
+                amplitude *= settings.Gain;
+                frequency *= settings.Lacunarity;
+            }
+
+            return amplitudeSum <= 0f ? 0f : value / amplitudeSum;
+        }
+
+        private static float SampleSWNoiseTileable3D(float x, float y, float z, float periodX, float periodY, float periodZ, FbmWorleySettings settings)
+        {
+            float fbmSimplex = SampleFbmSimplexTileable3D(
+                x * settings.BaseFrequencyScale,
+                y * settings.BaseFrequencyScale,
+                z * settings.BaseFrequencyScale,
+                periodX * settings.BaseFrequencyScale,
+                periodY * settings.BaseFrequencyScale,
+                periodZ * settings.BaseFrequencyScale,
+                settings);
+            float fbmOneMinusWorley = SampleFbmOneMinusWorleyTileable3D(x, y, z, periodX, periodY, periodZ, settings);
+            return Remap(fbmSimplex, 1-fbmOneMinusWorley, 1f, 0f, 1f);
+        }
+
+        private static float SampleSimplexFbmOneMinusWorleyTileable3D(float x, float y, float z, float periodX, float periodY, float periodZ, FbmWorleySettings settings)
+        {
+            float simplex = SampleTileable3D(
+                SampleSimplex3D,
+                x * settings.BaseFrequencyScale,
+                y * settings.BaseFrequencyScale,
+                z * settings.BaseFrequencyScale,
+                periodX * settings.BaseFrequencyScale,
+                periodY * settings.BaseFrequencyScale,
+                periodZ * settings.BaseFrequencyScale);
+            float fbmOneMinusWorley = SampleFbmOneMinusWorleyTileable3D(x, y, z, periodX, periodY, periodZ, settings);
+            return Remap(simplex, fbmOneMinusWorley, 1f, 0f, 1f);
+        }
+
+        private static float SampleFbmSimplexOneMinusFbmWorleyTileable3D(float x, float y, float z, float periodX, float periodY, float periodZ, FbmWorleySettings settings)
+        {
+            float fbmSimplex = SampleFbmSimplexTileable3D(
+                x * settings.BaseFrequencyScale,
+                y * settings.BaseFrequencyScale,
+                z * settings.BaseFrequencyScale,
+                periodX * settings.BaseFrequencyScale,
+                periodY * settings.BaseFrequencyScale,
+                periodZ * settings.BaseFrequencyScale,
+                settings);
+            float fbmWorley = SampleFbmWorleyRawTileable3D(
+                x * settings.WorleyFrequencyScale,
+                y * settings.WorleyFrequencyScale,
+                z * settings.WorleyFrequencyScale,
+                periodX * settings.WorleyFrequencyScale,
+                periodY * settings.WorleyFrequencyScale,
+                periodZ * settings.WorleyFrequencyScale,
+                settings);
+            return Remap(fbmSimplex, fbmWorley, 1f, 0f, 1f);
+        }
+
+        private static float SampleFbmSimplexTileable3D(float x, float y, float z, float periodX, float periodY, float periodZ, FbmWorleySettings settings)
+        {
+            float value = 0f;
+            float amplitude = 1f;
+            float frequency = 1f;
+            float amplitudeSum = 0f;
+
+            for (int i = 0; i < settings.Octaves; i++)
+            {
+                value += SampleTileable3D(
+                    SampleSimplex3D,
+                    x * frequency,
+                    y * frequency,
+                    z * frequency,
+                    periodX * frequency,
+                    periodY * frequency,
+                    periodZ * frequency) * amplitude;
+                amplitudeSum += amplitude;
+                amplitude *= settings.Gain;
+                frequency *= settings.Lacunarity;
+            }
+
+            return amplitudeSum <= 0f ? 0f : value / amplitudeSum;
+        }
+
+        private static float SampleFbmWorleyRawTileable3D(float x, float y, float z, float periodX, float periodY, float periodZ, FbmWorleySettings settings)
+        {
+            float value = 0f;
+            float amplitude = 1f;
+            float frequency = 1f;
+            float amplitudeSum = 0f;
+
+            for (int i = 0; i < settings.Octaves; i++)
+            {
+                value += SampleTileable3D(
+                    SampleWorley3D,
+                    x * frequency,
+                    y * frequency,
+                    z * frequency,
+                    periodX * frequency,
+                    periodY * frequency,
+                    periodZ * frequency) * amplitude;
+                amplitudeSum += amplitude;
+                amplitude *= settings.Gain;
+                frequency *= settings.Lacunarity;
+            }
+
+            return amplitudeSum <= 0f ? 0f : value / amplitudeSum;
         }
 
         private static float SamplePerlin2D(float x, float y)
@@ -712,6 +1057,27 @@ namespace TodSystem.Helper
                 settings);
         }
 
+        private static float SampleSWNoise2D(float x, float y, FbmWorleySettings settings)
+        {
+            float fbmSimplex = SampleFbmSimplex2D(
+                x * settings.BaseFrequencyScale,
+                y * settings.BaseFrequencyScale,
+                settings);
+            float fbmOneMinusWorley = SampleFbmOneMinusWorley2D(x, y, settings);
+            return Remap(fbmSimplex, 1-fbmOneMinusWorley, 1f, 0f, 1f);
+        }
+
+        private static float SampleSWNoise3D(float x, float y, float z, FbmWorleySettings settings)
+        {
+            float fbmSimplex = SampleFbmSimplex3D(
+                x * settings.BaseFrequencyScale,
+                y * settings.BaseFrequencyScale,
+                z * settings.BaseFrequencyScale,
+                settings);
+            float fbmOneMinusWorley = SampleFbmOneMinusWorley3D(x, y, z, settings);
+            return Remap(fbmSimplex, 1-fbmOneMinusWorley, 1f, 0f, 1f);
+        }
+
         private static float SampleSimplexFbmOneMinusWorley2D(float x, float y, FbmWorleySettings settings)
         {
             float simplex = SampleSimplex2D(x * settings.BaseFrequencyScale, y * settings.BaseFrequencyScale);
@@ -747,7 +1113,7 @@ namespace TodSystem.Helper
                 y * settings.WorleyFrequencyScale,
                 settings);
 
-            return Remap(fbmSimplex, fbmWorley, 1f, 0f, 1f);
+            return Remap(fbmSimplex, 1- fbmWorley, 1f, 0f, 1f);
         }
 
         private static float SampleFbmSimplexOneMinusFbmWorley3D(float x, float y, float z, FbmWorleySettings settings)
@@ -1131,6 +1497,11 @@ namespace TodSystem.Helper
         private static string EnsurePngExtension(string fileName)
         {
             return fileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? fileName : $"{fileName}.png";
+        }
+
+        private static float GetTileCoordinate(int index, int size)
+        {
+            return size <= 1 ? 0f : (float)index / size;
         }
 
         private static string EnsureAssetExtension(string fileName)

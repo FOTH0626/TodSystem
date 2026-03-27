@@ -8,21 +8,22 @@
 
 float RayIntersectSphereLength(float3 center, float radius, float3 rayOrigin, float3 rayDirection)
 {
-    //O代表光线原点，S表示球心，H表示球心向光线引垂线交点，P代表交点，画图理解
-    float OS = length(center - rayOrigin);
-    float OH = dot(center - rayOrigin, rayDirection);
-    float SH = sqrt(OS*OS - OH*OH);
-    float PH = sqrt(radius*radius - SH*SH);
+    float3 originToCenter = rayOrigin - center;
+    float halfB = dot(originToCenter, rayDirection);
+    float c = dot(originToCenter, originToCenter) - radius * radius;
+    float discriminant = halfB * halfB - c;
 
-    // ray miss sphere
-    if(SH > radius) return -1;
+    if (discriminant < 0.0f)
+    {
+        return -1.0f;
+    }
 
-    // use min distance
-    float t1 = OH - PH;
-    float t2 = OH + PH;
-    float t = (t1 < 0) ? t2 : t1;
+    float sqrtDiscriminant = sqrt(max(discriminant, 0.0f));
+    float tNear = -halfB - sqrtDiscriminant;
+    float tFar = -halfB + sqrtDiscriminant;
+    float t = (tNear >= 0.0f) ? tNear : tFar;
 
-    return t;
+    return (t >= 0.0f) ? t : -1.0f;
 }
 
 void GetTransmittanceLutParamsFromUV(float bottomRadius, float topRadius, float2 uv, out float mu, out float r)

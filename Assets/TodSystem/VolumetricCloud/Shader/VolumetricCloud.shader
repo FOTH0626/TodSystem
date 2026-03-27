@@ -19,16 +19,13 @@
            
            #pragma vertex Vert
            #pragma fragment Frag
+
+
            
            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
            #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
-
-           #include "VolumetricCloudParams.hlsl"
-           #include "VolumetricCloudUtil.hlsl"
            
-           #include "Assets/TodSystem/Atmosphere/Shader/Helper.hlsl"
-
            TEXTURE2D(_CloudMap);
            SAMPLER(sampler_CloudMap);
            TEXTURE3D(_NoiseTexture);
@@ -36,27 +33,40 @@
            TEXTURE2D(_CloudLut);
            SAMPLER(sampler_CloudLut);
            
+           TEXTURE2D(_transmittanceLut);
+           SAMPLER(sampler_transmittanceLut);
+
+
+           #include "VolumetricCloudParams.hlsl"
+           #include "VolumetricCloudUtil.hlsl"
+
+           #include "Assets/TodSystem/Atmosphere/Shader/Helper.hlsl"
+
+
            
            float4 Frag(Varyings input):SV_Target
            {
                float4 baseColor = SAMPLE_TEXTURE2D(_BlitTexture,sampler_LinearClamp,input.texcoord);
                float2 uv = input.texcoord;
+               float rawDepth = SampleSceneDepth(uv);
                #if UNITY_REVERSED_Z
-                     float depth = SampleSceneDepth(uv);
+                     float depth = rawDepth;
+                     bool isSkyPixel = rawDepth <= 1e-6;
                #else
-               // Adjust z to match NDC for OpenGL
-                    float depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SampleSceneDepth(uv));
+                // Adjust z to match NDC for OpenGL
+                    float depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, rawDepth);
+                    bool isSkyPixel = rawDepth >= 1.0 - 1e-6;
                #endif
-               //far plane is 1, near is 0
-               if (abs(depth) > 1e-10 )
+               if (!isSkyPixel)
                {
                    return float4(baseColor.rgb,1);
                }
                ViewRay viewRay = CreateViewRayByScreenUV(uv,depth);
-               float4 a = Calculate(viewRay, _CloudMap, sampler_CloudMap, 
+               float4 a = Calculate(viewRay, uv,
+                   _CloudMap, sampler_CloudMap,
                    _NoiseTexture,sampler_NoiseTexture,
                    _CloudLut,sampler_CloudLut); 
-               float3 fin = a.rgb + a.a*baseColor;
+               float3 fin = a.rgb + a.a * baseColor.rgb;
 
                return float4(fin,1);
            }

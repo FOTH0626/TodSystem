@@ -17,7 +17,7 @@ MonoBehaviour:
   atmosphereHeight: 60000
   sunLightIntensity: 31.4
   sunLightColor: {r: 1, g: 1, b: 1, a: 1}
-  sunDiskAngle: 1
+  sunDiskAngle: 2
   rayleighScatteringScale: 1
   rayleighScatteringScalarHeight: 8000
   mieScatteringScale: 1

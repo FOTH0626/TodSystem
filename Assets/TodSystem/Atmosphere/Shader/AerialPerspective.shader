@@ -78,7 +78,7 @@
                 // 体素 slice 计算
                 //TODO: 使用平方映射可以提高近处精度
                 float dis01 = saturate(dis / _AerialPerspectiveDistance);
-                float dis0Z = dis01 * _AerialPerspectiveVoxelSize.z - 0.5;  //这里是因为计算时+0.5偏移计算中心点，采样时需要对应减去
+                float dis0Z = dis01 * (_AerialPerspectiveVoxelSize.z - 1); 
                 float slice = clamp( floor(dis0Z), 0.0, _AerialPerspectiveVoxelSize.z - 1); 
                 float nextSlice = min(slice + 1, _AerialPerspectiveVoxelSize.z - 1);
                 float lerpFactor = frac(dis0Z);
