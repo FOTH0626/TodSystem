@@ -19,8 +19,11 @@ float _WeatherMapScale;
 float _ShapeNoiseScale;
 float _DetailNoiseScale;
 
-CBUFFER_END
 
+float4 _CloudAmbientColor = float4(0,0,1,1);
+float _PowderSterngth;
+
+CBUFFER_END
 
 
 struct CloudParams

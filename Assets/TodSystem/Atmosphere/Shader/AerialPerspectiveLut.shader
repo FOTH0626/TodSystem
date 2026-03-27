@@ -94,7 +94,9 @@
                 // inScattering
                 color.rgb = GetSkyView(
                     param, eyePos, viewDirWS, lightDir, maxDis,
-                    _transmittanceLut, _multiScatteringLut, sampler_LinearClamp
+                    _transmittanceLut, 
+                    _multiScatteringLut, 
+                    sampler_LinearClamp
                 );
 
                 // transmittance
@@ -103,6 +105,7 @@
                 float3 t2 = TransmittanceToAtmosphereByLut(param, voxelPos, viewDirWS, _transmittanceLut, sampler_LinearClamp);
                 float3 t = t1 / t2;
                 color.a = dot(t, float3(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0));
+
 
                 return color;
             }

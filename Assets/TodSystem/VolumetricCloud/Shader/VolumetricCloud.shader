@@ -19,12 +19,15 @@
            
            #pragma vertex Vert
            #pragma fragment Frag
-
+            
+           #pragma  target 4.0
 
            
            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
            #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
+           
+
            
            TEXTURE2D(_CloudMap);
            SAMPLER(sampler_CloudMap);
@@ -32,15 +35,18 @@
            SAMPLER(sampler_NoiseTexture);
            TEXTURE2D(_CloudLut);
            SAMPLER(sampler_CloudLut);
-           
+           //
            TEXTURE2D(_transmittanceLut);
            SAMPLER(sampler_transmittanceLut);
+           TEXTURE2D(_aerialPerspectiveLut);
+           SAMPLER(sampler_aerialPerspectiveLut);
+           TEXTURE2D(_multiScatteringLut);
+           
+           
 
 
-           #include "VolumetricCloudParams.hlsl"
            #include "VolumetricCloudUtil.hlsl"
-
-           #include "Assets/TodSystem/Atmosphere/Shader/Helper.hlsl"
+           #include "Assets/TodSystem/Atmosphere/Shader/SkyView.hlsl"
 
 
            
@@ -61,13 +67,18 @@
                {
                    return float4(baseColor.rgb,1);
                }
+               
                ViewRay viewRay = CreateViewRayByScreenUV(uv,depth);
-               float4 a = Calculate(viewRay, uv,
+               Result Res;
+               Res = Calculate(viewRay, uv,
                    _CloudMap, sampler_CloudMap,
                    _NoiseTexture,sampler_NoiseTexture,
                    _CloudLut,sampler_CloudLut); 
-               float3 fin = a.rgb + a.a * baseColor.rgb;
-
+               float4 ScatteringTransmittance = Res.ScatteringTransmittance;
+               float3 fin = ScatteringTransmittance.rgb + ScatteringTransmittance.a * baseColor.rgb;
+               float3 meanPosition = Res.meanPosition;
+   
+                //顺带一提，对云做空气透视（atmosphere里那套实现）能把云变成紫色，不要问我怎么知道的（
                return float4(fin,1);
            }
            

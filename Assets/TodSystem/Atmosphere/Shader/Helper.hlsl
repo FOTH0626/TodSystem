@@ -5,6 +5,7 @@
 #define PI 3.1415926535f
 #endif
 
+ #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
 float RayIntersectSphereLength(float3 center, float radius, float3 rayOrigin, float3 rayDirection)
 {
@@ -78,6 +79,18 @@ float2 ViewDirToUV(float3 v)
     uv += float2(0.5, 0.5);
 
     return uv; 
+}
+
+float3 GetFragmentWorldPos(float2 uv)
+{
+    float depth;
+    #if UNITY_REVERSED_Z
+    depth = SampleSceneDepth(uv);
+    #else
+    depth = lerp(UNITY_NEAR_CLIP_VALUE, 1.0, SampleSceneDepth(uv));
+    #endif
+
+    return ComputeWorldSpacePosition(uv, depth, UNITY_MATRIX_I_VP);
 }
 
 #endif

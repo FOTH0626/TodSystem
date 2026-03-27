@@ -86,17 +86,22 @@ CloudCoverage CalculateCloudCoverage(Texture2D cloudMap, SamplerState spl,float2
     return output;
 }
 
-CloudProperties CalculateCloudProperties(float3 uvw,float3 position, CloudCoverage cloudCoverage,
+CloudProperties CalculateCloudProperties(float3 uvw, CloudCoverage cloudCoverage,
     Texture3D NoiseTex, SamplerState NoiseSampler, 
     Texture2D CloudLut, SamplerState CloudLutSampler)
 {
     CloudProperties output;
-    float4 Noise = SAMPLE_TEXTURE3D_LOD(NoiseTex, NoiseSampler, float3(position.xzy)  * _ShapeNoiseScale,0);
+    float4 Noise = SAMPLE_TEXTURE3D_LOD(NoiseTex, NoiseSampler, uvw * _ShapeNoiseScale,0);
     float4 CloudLutValue = SAMPLE_TEXTURE2D(CloudLut, CloudLutSampler, float2(cloudCoverage.typeIndex, uvw.z));
-    float shape = Remap(Noise.r, 1 -cloudCoverage.coverage,1,0,1);
-    float fbmWorley = (0.625 * Noise.g + 0.375 * Noise.b) * _DetailNoiseScale;
-    output.density = saturate(shape - fbmWorley * _ErosionStrength);
+    float heightMultipler = CloudLutValue.r;//记录着不同index的云在高度上的分布；
+    float shape = Remap(Noise.r , 1 -cloudCoverage.coverage * heightMultipler,1.0f,0.0f,1.0f);
+    float fbmWorley = (0.625 * Noise.g + 0.375 * Noise.b ) ;
+    //output.density = saturate(shape - fbmWorley * _ErosionStrength);
+    // output.density = Remap(shape, 1-fbmWorley,1,0,1);
+    // output.density = Remap(output.density, 1-fbmWorley, 1,0,1);
+    output.density = Remap(shape,fbmWorley * _ErosionStrength, 1,0,1);
     output.ao = CloudLutValue.g;
+
     
     return output;
 }
@@ -126,14 +131,20 @@ CloudProperties CalculateCloudPropertiesByPosition(float3 position,
                    / (cloudParams.CloudLayerHighHeight - cloudParams.CloudLayerLowHeight);
     height01 = saturate(height01);
 
-    float3 uvw = float3(position.xz,height01);
-    CloudProperties properties = CalculateCloudProperties(uvw, position,coverage,NoiseTexture,noiseSampler,cloudLut,cloudLutSampler);
+    float3 uvw = float3(uv,height01);
+    CloudProperties properties = CalculateCloudProperties(uvw, coverage,NoiseTexture,noiseSampler,cloudLut,cloudLutSampler);
         
     return properties;
 }
 
 
-float4 Calculate(ViewRay viewRay, float2 uv,
+struct Result
+{
+    float4 ScatteringTransmittance;
+    float3 meanPosition;
+};
+
+Result Calculate(ViewRay viewRay, float2 uv,
     Texture2D cloudMap, SamplerState couldMapSampler, 
     Texture3D NoiseTexture, SamplerState noiseSampler,
     Texture2D cloudLut, SamplerState cloudLutSampler)
@@ -146,7 +157,10 @@ float4 Calculate(ViewRay viewRay, float2 uv,
     bool isHitEarth = HitEarth > 0;
     if (isHitEarth)
     {
-        return float4(0,0,0,1);
+        Result res;
+        res.ScatteringTransmittance = float4(0,0,0,1);
+        res.meanPosition = float3(0,0,0);
+        return res;
     }
 
     float lowHitLength = RayIntersectSphereLength(float3(0,0,0),
@@ -159,7 +173,10 @@ float4 Calculate(ViewRay viewRay, float2 uv,
         viewRay.viewDirWS);
     if (lowHitLength < 0 && highHitLength < 0 )//视线和云层球壳不相交
     {
-        return float4(0,0,0,1);
+        Result res;
+        res.ScatteringTransmittance = float4(0,0,0,1);
+        res.meanPosition = float3(0,0,0);
+        return res;
     }
     if (lowHitLength > highHitLength && highHitLength > 0)//从太空向地面看
     {
@@ -170,7 +187,10 @@ float4 Calculate(ViewRay viewRay, float2 uv,
     lowHitLength = max(lowHitLength, 0.0f);
     if (highHitLength <= lowHitLength)
     {
-        return float4(0,0,0,1);
+        Result res;
+        res.ScatteringTransmittance = float4(0,0,0,1);
+        res.meanPosition = float3(0,0,0);
+        return res;
     }
 
     int RayMarchingSteps = min(_RayMarchingSteps,MAX_RAYMARCHING_STEP);
@@ -181,9 +201,14 @@ float4 Calculate(ViewRay viewRay, float2 uv,
     float sigma_t = lerp(NORMAL_CLOUD_SIGMA_EXTINCTION,
                     RAINY_CLOUD_SIGMA_EXTINCTION, 
                     _isRainyCloud);
-    
+    float albedo = 0.95;
+    float3 lightDir = GetMainLight().direction;//Sun
+    float3 lightColor = GetMainLight().color;
     float transmittance = 1;
     float3 scattering = 0;
+    
+    float3 rayHitPos = float3(0,0,0);
+    float rayHitPosWeight = 0;
     
     for (int i = 0; i < RayMarchingSteps ; ++i)
     {
@@ -193,16 +218,12 @@ float4 Calculate(ViewRay viewRay, float2 uv,
                 NoiseTexture, noiseSampler,
                 cloudLut, cloudLutSampler );
         
-        float3 sigma_s = (properties.density * sigma_t).xxx ;
+        float3 sigma_s = (properties.density * sigma_t * albedo).xxx ;
         float stepTransmittance = exp(-properties.density * sigma_t * stepLength);
-
-
-        float3 lightDir = GetMainLight().direction;//Sun
         
         float3 sunTransmittance =  TransmittanceToAtmosphereByLut(atmosphereParams, stepPosition + float3(0,atmosphereParams.PlanetRadius,0), lightDir, _transmittanceLut, sampler_transmittanceLut);
-
         
-
+        //向太阳采样
         float sunVisibility =1;
         {
 
@@ -218,6 +239,7 @@ float4 Calculate(ViewRay viewRay, float2 uv,
 
             float3 SunRayMarchingPositionWS = stepPosition + lightDir * SunRayStepLength * 0.5;
 
+
             for (uint j = 0; j < SunStepTimes; ++j)
             {
 
@@ -229,7 +251,6 @@ float4 Calculate(ViewRay viewRay, float2 uv,
                 sunVisibility *= exp(-stepDestiny  * sigma_t * min(SunRayStepLength,MAX_SUN_RAY_MARCHING_LENGTH));
 
                 SunRayMarchingPositionWS += lightDir * SunRayStepLength;
-                //I don't know how long should the ray step ,so multi 2 .
 
             }
         }
@@ -237,16 +258,32 @@ float4 Calculate(ViewRay viewRay, float2 uv,
 
         float3 stepScattering = GetMainLight().color 
                                 * sunTransmittance 
-                                * dualLobPhase(0.8, -0.5, 0.2, dot(-viewRay.viewDirWS, lightDir))
+                                * dualLobPhase(0.8, -0.1, 0.45, dot(-viewRay.viewDirWS, lightDir))
                                 * sunVisibility;//TODO:
+        //add some hack
+        float3 ambientColor = _CloudAmbientColor * lerp(0.35,1.0,properties.ao);
         
-        scattering += stepScattering * transmittance * sigma_s * stepLength;
+        float powder = 1.0 - exp(-properties.density * stepLength * _PowderSterngth);
         
+        float3 stepLighting  = stepScattering + ambientColor + powder * lightColor * sunVisibility ;
+        
+        scattering += stepLighting * transmittance * sigma_s * stepLength;
         transmittance *= stepTransmittance;
+
+        
+        rayHitPos += stepPosition * transmittance;
+        rayHitPosWeight += transmittance;
         
         stepPosition += stepLength * viewRay.viewDirWS;
+        if (transmittance <0.03)
+        {
+            break;
+        }
     }
-    return float4(scattering,transmittance);
+    Result res;
+    res.ScatteringTransmittance = float4(scattering,transmittance);
+    res.meanPosition = rayHitPos/rayHitPosWeight;
+    return res;
 }
 
 #endif
