@@ -34,6 +34,16 @@ struct CloudProperties
     float ao;
 };
 
+struct CloudFootprint
+{
+    float2 baseUv;
+    float2 topUv;
+    float2 shapeUv;
+    float topBlend;
+    float baseMask;
+    float topMask;
+};
+
 float RayIntersectSphere(float3 center, float radius, float3 rayOrigin, float3 rayDirection)
 {
     float3 originToCenter = rayOrigin - center;
@@ -108,6 +118,54 @@ CloudProperties CalculateCloudProperties(float3 uvw, CloudCoverage cloudCoverage
     return output;
 }
 
+float GetWeatherMapMask(float2 uv)
+{
+    float distance = sqrt(uv.x * uv.x + uv.y * uv.y - uv.x - uv.y + 0.5f);
+    return distance <= _WeatherMapScale * 0.5f ? 1.0f : 0.0f;
+}
+
+// 数学：
+//   对同一世界点构造两套 weather footprint：底部 uv_b 和顶部 uv_t = uv_b + d，
+//   再用 topBlend = smoothstep(h_start, h_end, height01) 在两者之间插值得到 shapeUv。
+// 物理：
+//   真实积云顶部常受浮升和风切变影响，相比云底更容易外扩、偏移或形成 overhang，
+//   所以不同高度不应共享完全相同的水平截面。
+// 原理：
+//   底部 footprint 继续负责天气分布的锚点，顶部 footprint 提供第二个宏观截面；
+//   ray-march 时再按高度在两者之间过渡，把“二维底图挤出”改成“上下两层轮廓混合”。
+// 编写原因：
+//   之前的塑形完全依赖单一 XZ footprint，云柱上下严格对齐，体块会显得像 2D 云图加厚。
+//   这个函数用很低的代价把顶部偏移和外扩引入密度场，让轮廓更容易出现蘑菇头、卷边和悬挑。
+CloudFootprint CalculateCloudFootprint(float3 position, float height01, CloudParams cloudParams)
+{
+    CloudFootprint output;
+
+    output.baseUv = position.xz / float2(_CloudMapSize, _CloudMapSize) + float2(0.5f, 0.5f);
+
+    float2 topOffsetDirection = cloudParams.TopOffsetDirection;
+    float directionLength = length(topOffsetDirection);
+    if (directionLength < 1e-4f)
+    {
+        topOffsetDirection = float2(1.0f, 0.0f);
+    }
+    else
+    {
+        topOffsetDirection /= directionLength;
+    }
+
+    float2 topOffsetUv = topOffsetDirection * (cloudParams.TopOffsetDistance / max(_CloudMapSize, 1.0f));
+    output.topUv = output.baseUv + topOffsetUv;
+
+    float blendStart = min(cloudParams.TopShapeBlendStart, cloudParams.TopShapeBlendEnd - 1e-4f);
+    float blendEnd = max(cloudParams.TopShapeBlendEnd, cloudParams.TopShapeBlendStart + 1e-4f);
+    output.topBlend = smoothstep(blendStart, blendEnd, height01);
+    output.shapeUv = lerp(output.baseUv, output.topUv, output.topBlend);
+
+    output.baseMask = GetWeatherMapMask(output.baseUv);
+    output.topMask = GetWeatherMapMask(output.topUv);
+    return output;
+}
+
 
 CloudProperties CalculateCloudPropertiesByPosition(float3 position,
     Texture2D cloudMap, SamplerState couldMapSampler, 
@@ -116,24 +174,29 @@ CloudProperties CalculateCloudPropertiesByPosition(float3 position,
 {
     AtmosphereParams atmosphereParams = GetAtmosphereParameter();
     CloudParams cloudParams = GetCloudParams();
-    
-    // CloudProperties stepProperties = CalculateCloudPropertiesByPositionWS(stepPosition);
 
-    float2 uv = position.xz / float2(_CloudMapSize, _CloudMapSize) + float2(0.5f,0.5f);
-    float distance = sqrt( uv.x*uv.x + uv.y*uv.y -uv.x - uv.y +0.5f);//distance to (0.5,0.5)
-    if (distance > _WeatherMapScale * 0.5f)
-    {
-        CloudProperties res;
-        return ZERO_INITIALIZE(CloudProperties,res);
-    }
-    // float4 cloudMapValue  = SAMPLE_TEXTURE2D(cloudMap,spl, uv);
-    CloudCoverage coverage = CalculateCloudCoverage(cloudMap, couldMapSampler, uv);
     float distanceToCenter = length(position + float3(0, atmosphereParams.PlanetRadius, 0));
     float height01 = (distanceToCenter - atmosphereParams.PlanetRadius - cloudParams.CloudLayerLowHeight)
                    / (cloudParams.CloudLayerHighHeight - cloudParams.CloudLayerLowHeight);
     height01 = saturate(height01);
 
-    float3 uvw = float3(uv,height01);
+    CloudFootprint footprint = CalculateCloudFootprint(position, height01, cloudParams);
+    if (footprint.baseMask <= 0.0f && footprint.topMask <= 0.0f)
+    {
+        CloudProperties res;
+        return ZERO_INITIALIZE(CloudProperties, res);
+    }
+
+    CloudCoverage bottomCoverage = CalculateCloudCoverage(cloudMap, couldMapSampler, footprint.baseUv);
+    CloudCoverage topCoverage = CalculateCloudCoverage(cloudMap, couldMapSampler, footprint.topUv);
+    bottomCoverage.coverage *= footprint.baseMask;
+    topCoverage.coverage *= footprint.topMask;
+
+    CloudCoverage coverage;
+    coverage.coverage = lerp(bottomCoverage.coverage, topCoverage.coverage, footprint.topBlend);
+    coverage.typeIndex = bottomCoverage.typeIndex;
+
+    float3 uvw = float3(footprint.shapeUv, height01);
     CloudProperties properties = CalculateCloudProperties(uvw, coverage,NoiseTexture,noiseSampler,cloudLut,cloudLutSampler);
         
     return properties;
@@ -308,6 +371,7 @@ Result Calculate(ViewRay viewRay, float2 uv,
     float3 rayHitPos = float3(0,0,0);
     float rayHitPosWeight = 0;
     
+    [loop]
     for (int i = 0; i < RayMarchingSteps ; ++i)
     {
         CloudProperties properties = 
@@ -338,6 +402,7 @@ Result Calculate(ViewRay viewRay, float2 uv,
             float3 SunRayMarchingPositionWS = stepPosition + lightDir * SunRayStepLength * 0.5;
 
 
+            [loop]
             for (uint j = 0; j < SunStepTimes; ++j)
             {
 

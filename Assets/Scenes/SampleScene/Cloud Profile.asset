@@ -69,3 +69,15 @@ MonoBehaviour:
   PowderStrength:
     m_OverrideState: 1
     m_Value: 1.67
+  TopOffsetDirection:
+    m_OverrideState: 1
+    m_Value: {x: 0.75, y: 0.62}
+  TopOffsetDistance:
+    m_OverrideState: 1
+    m_Value: 8000
+  TopShapeBlendStart:
+    m_OverrideState: 1
+    m_Value: 0.235
+  TopShapeBlendEnd:
+    m_OverrideState: 1
+    m_Value: 0.579

@@ -27,6 +27,10 @@ public class VolumetricCloudRenderPass : ScriptableRenderPass
     private static readonly int MultiScatteringStrength = Shader.PropertyToID("_MultiScatteringStrength");
     private static readonly int PowderSterngth = Shader.PropertyToID("_PowderSterngth");
     private static readonly int CloudAmbientColor = Shader.PropertyToID("_CloudAmbientColor");
+    private static readonly int CloudTopOffsetDirection = Shader.PropertyToID("_CloudTopOffsetDirection");
+    private static readonly int CloudTopOffsetDistance = Shader.PropertyToID("_CloudTopOffsetDistance");
+    private static readonly int CloudTopShapeBlendStart = Shader.PropertyToID("_CloudTopShapeBlendStart");
+    private static readonly int CloudTopShapeBlendEnd = Shader.PropertyToID("_CloudTopShapeBlendEnd");
     
     #endregion
     
@@ -91,6 +95,14 @@ public class VolumetricCloudRenderPass : ScriptableRenderPass
         _volumetricCloudMaterial.SetFloat(SkyAmbientStrength, _volume.SkyAmbientStrength.value);
         _volumetricCloudMaterial.SetFloat(MultiScatteringStrength, _volume.MultiScatteringStrength.value);
         _volumetricCloudMaterial.SetFloat(PowderSterngth, _volume.PowderStrength.value);
+        _volumetricCloudMaterial.SetVector(CloudTopOffsetDirection, new Vector4(
+            _volume.TopOffsetDirection.value.x,
+            _volume.TopOffsetDirection.value.y,
+            0.0f,
+            0.0f));
+        _volumetricCloudMaterial.SetFloat(CloudTopOffsetDistance, _volume.TopOffsetDistance.value);
+        _volumetricCloudMaterial.SetFloat(CloudTopShapeBlendStart, _volume.TopShapeBlendStart.value);
+        _volumetricCloudMaterial.SetFloat(CloudTopShapeBlendEnd, _volume.TopShapeBlendEnd.value);
 
         Color ambientColor = (
             RenderSettings.ambientSkyColor * 0.55f +

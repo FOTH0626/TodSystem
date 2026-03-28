@@ -24,6 +24,10 @@ float _SkyAmbientStrength;
 float _MultiScatteringStrength;
 float _PowderSterngth;
 float4 _CloudAmbientColor;
+float2 _CloudTopOffsetDirection;
+float _CloudTopOffsetDistance;
+float _CloudTopShapeBlendStart;
+float _CloudTopShapeBlendEnd;
 
 CBUFFER_END
 
@@ -31,7 +35,11 @@ CBUFFER_END
 struct CloudParams
 {
    float CloudLayerLowHeight;
-   float CloudLayerHighHeight;   
+   float CloudLayerHighHeight;
+   float2 TopOffsetDirection;
+   float TopOffsetDistance;
+   float TopShapeBlendStart;
+   float TopShapeBlendEnd;
 };
 
 CloudParams GetCloudParams()
@@ -39,6 +47,10 @@ CloudParams GetCloudParams()
    CloudParams output;
    output.CloudLayerLowHeight = _CloudLayerLowHeight;
    output.CloudLayerHighHeight = _CloudLayerHighHeight;
+   output.TopOffsetDirection = _CloudTopOffsetDirection;
+   output.TopOffsetDistance = _CloudTopOffsetDistance;
+   output.TopShapeBlendStart = _CloudTopShapeBlendStart;
+   output.TopShapeBlendEnd = _CloudTopShapeBlendEnd;
    return output;
 }
 

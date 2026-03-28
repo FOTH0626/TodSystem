@@ -36,4 +36,12 @@ public class VolumetricCloudVolume :   VolumeComponent , IPostProcessComponent
     public ClampedFloatParameter MultiScatteringStrength = new(1.15f, 0.0f, 4.0f, false);
     [InspectorName("Powder 强度")]
     public ClampedFloatParameter PowderStrength = new(2.0f, 0.0f, 8.0f, false);
+    [InspectorName("顶部偏移方向(XZ)")]
+    public Vector2Parameter TopOffsetDirection = new(new Vector2(1.0f, 0.35f), false);
+    [InspectorName("顶部偏移距离（米）")]
+    public ClampedFloatParameter TopOffsetDistance = new(1800.0f, 0.0f, 8000.0f, false);
+    [InspectorName("顶部塑形开始高度")]
+    public ClampedFloatParameter TopShapeBlendStart = new(0.35f, 0.0f, 1.0f, false);
+    [InspectorName("顶部塑形结束高度")]
+    public ClampedFloatParameter TopShapeBlendEnd = new(0.88f, 0.0f, 1.0f, false);
 }
