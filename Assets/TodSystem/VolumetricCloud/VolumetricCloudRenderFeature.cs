@@ -47,6 +47,7 @@ public class VolumetricCloudRenderFeature : ScriptableRendererFeature
         _volume = VolumeManager.instance.stack?.GetComponent<VolumetricCloudVolume>();
         if (_volume == null || !_volume.IsActive())
         {
+            _pass.ResetCameraHistory(renderingData.cameraData.camera);
             return;
         }
 

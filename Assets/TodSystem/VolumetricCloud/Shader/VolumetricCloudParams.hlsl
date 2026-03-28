@@ -1,7 +1,7 @@
 ﻿#ifndef VOLUMETRIC_CLOUD_PARAMS_HLSL
 #define VOLUMETRIC_CLOUD_PARAMS_HLSL
 
-#define MAX_RAYMARCHING_STEP 32
+#define MAX_RAYMARCHING_STEP 64
 #define NORMAL_CLOUD_SIGMA_EXTINCTION 0.06
 #define RAINY_CLOUD_SIGMA_EXTINCTION 0.12
 #define MAX_SUN_RAY_MARCHING_LENGTH 1000
@@ -28,6 +28,11 @@ float2 _CloudTopOffsetDirection;
 float _CloudTopOffsetDistance;
 float _CloudTopShapeBlendStart;
 float _CloudTopShapeBlendEnd;
+float _TemporalHistoryWeight;
+float _TemporalWorldPosThreshold;
+float _TemporalOpacityThreshold;
+float _TemporalLuminanceThreshold;
+float _TemporalClampStrength;
 
 CBUFFER_END
 

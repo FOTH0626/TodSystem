@@ -9,13 +9,6 @@
 
 #include "VolumetricCloudParams.hlsl"
 
-float InterleavedGradientNoise(float2 pixelPos)
-{
-    return frac(sin(dot(pixelPos.xy,
-                       float2(12.9898,78.233)))
-               * 43758.5453123);
-}
-
 struct ViewRay
 {
     float3 positionWS;
@@ -108,10 +101,10 @@ CloudProperties CalculateCloudProperties(float3 uvw, CloudCoverage cloudCoverage
     float heightMultipler = CloudLutValue.r;//记录着不同index的云在高度上的分布；
     float shape = Remap(Noise.r , 1 -cloudCoverage.coverage * heightMultipler,1.0f,0.0f,1.0f);
     float fbmWorley = (0.625 * Noise.g + 0.375 * Noise.b ) ;
-    output.density = saturate(shape - fbmWorley * _ErosionStrength);
+    // output.density = saturate(shape - fbmWorley * _ErosionStrength);
     // output.density = Remap(shape, 1-fbmWorley,1,0,1);
     // output.density = Remap(output.density, 1-fbmWorley, 1,0,1);
-    // output.density = Remap(shape,fbmWorley * _ErosionStrength, 1,0,1);
+    output.density = Remap(shape,fbmWorley * _ErosionStrength, 1,0,1);
     output.ao = CloudLutValue.g;
 
     
@@ -305,7 +298,7 @@ float3 EvaluateCloudMultipleScattering(float3 sunLuminance, float sunVisibility,
     return sunLuminance * lighting;
 }
 
-Result Calculate(ViewRay viewRay, float2 uv,
+Result Calculate(ViewRay viewRay, float rayMarchJitter,
     Texture2D cloudMap, SamplerState couldMapSampler, 
     Texture3D NoiseTexture, SamplerState noiseSampler,
     Texture2D cloudLut, SamplerState cloudLutSampler)
@@ -354,34 +347,59 @@ Result Calculate(ViewRay viewRay, float2 uv,
         return res;
     }
 
-    int RayMarchingSteps = min(_RayMarchingSteps,MAX_RAYMARCHING_STEP);
+    // Math:
+    //   We keep the user-facing step count but internally double the stratified intervals at half resolution,
+    //   then sample each interval at its midpoint after a jittered offset on the segment boundaries.
+    // Physical meaning:
+    //   The cloud is still integrated along the same shell thickness, but each pixel sees finer depth slices,
+    //   which turns the old visible marching slabs into much weaker residual noise.
+    // Principle:
+    //   Jittering only the sample points while evaluating them as if they represented the whole segment causes
+    //   step bands. Midpoint sampling plus more intervals gives a better estimate of the piecewise-constant
+    //   extinction/scattering integral without changing the density field itself.
+    // Why it exists:
+    //   After the temporal filter was added, the remaining "slice feeling" was coming from the coarse view-ray
+    //   integration, not from the denoiser. This raises the sampling quality at the source.
+    int RayMarchingSteps = min(_RayMarchingSteps * 2, MAX_RAYMARCHING_STEP);
 
-    float stepLength = (highHitLength -lowHitLength)/RayMarchingSteps;
-    float3 stepPosition = viewRay.positionWS + (lowHitLength)* viewRay.viewDirWS + viewRay.viewDirWS * stepLength *  InterleavedGradientNoise(uv);
+    float totalRayLength = highHitLength - lowHitLength;
+    float stepLength = totalRayLength / RayMarchingSteps;
+    float3 rayStartPosition = viewRay.positionWS + lowHitLength * viewRay.viewDirWS;
+    float rayLengthOffset = stepLength * saturate(rayMarchJitter);
     
     float sigma_t = lerp(NORMAL_CLOUD_SIGMA_EXTINCTION,
                     RAINY_CLOUD_SIGMA_EXTINCTION, 
                     _isRainyCloud);
-    float albedo = 0.95;
     float3 lightDir = GetMainLight().direction;//Sun
     float3 lightColor = GetMainLight().color;
     float transmittance = 1;
     float3 scattering = 0;
     
-    float3 rayHitPos = float3(0,0,0);
-    float rayHitPosWeight = 0;
+    float3 weightedMeanPosition = float3(0,0,0);
+    float weightedMeanPositionSum = 0;
     
     [loop]
     for (int i = 0; i < RayMarchingSteps ; ++i)
     {
+        float albedo = 0.95;
+        float marchedLength = rayLengthOffset + i * stepLength;
+        if (marchedLength >= totalRayLength)
+        {
+            break;
+        }
+
+        float currentStepLength = min(stepLength, totalRayLength - marchedLength);
+        float sampleLength = marchedLength + currentStepLength * 0.5f;
+        float3 stepPosition = rayStartPosition + viewRay.viewDirWS * sampleLength;
+
         CloudProperties properties = 
             CalculateCloudPropertiesByPosition(stepPosition,
                 cloudMap,  couldMapSampler, 
                 NoiseTexture, noiseSampler,
                 cloudLut, cloudLutSampler );
         
-        float3 sigma_s = (properties.density * sigma_t * albedo).xxx ;
-        float stepTransmittance = exp(-properties.density * sigma_t * stepLength);
+        float stepExtinction = properties.density * sigma_t;
+        float stepTransmittance = exp(-stepExtinction * currentStepLength);
         float3 atmospherePosition = stepPosition + float3(0,atmosphereParams.PlanetRadius,0);
         float3 sunTransmittance =  TransmittanceToAtmosphereByLut(atmosphereParams, atmospherePosition, lightDir, _transmittanceLut, sampler_transmittanceLut);
         
@@ -430,18 +448,33 @@ Result Calculate(ViewRay viewRay, float2 uv,
                                ApproximateCloudSkyAmbient(lightDir) * _SkyAmbientStrength)
                               * lerp(0.35,1.0,properties.ao);
         
-        float powder = 1.0 - exp(-properties.density * stepLength * _PowderSterngth);
+        float powder = 1.0 - exp(-properties.density * currentStepLength * _PowderSterngth);
         
         float3 stepLighting  = stepScattering + multiScattering + ambientColor + powder * sunLuminance * sunVisibility ;
         
-        scattering += stepLighting * transmittance * sigma_s * stepLength;
+        float visibleExtinction = transmittance * (1.0 - stepTransmittance);
+        float stepScatteringIntegral = (1.0 - stepTransmittance) * albedo;
+        scattering += stepLighting * transmittance * stepScatteringIntegral;
         transmittance *= stepTransmittance;
 
-        
-        rayHitPos += stepPosition * transmittance;
-        rayHitPosWeight += transmittance;
-        
-        stepPosition += stepLength * viewRay.viewDirWS;
+        // Math:
+        //   The history guide should follow where the visible cloud mass actually sits on the ray,
+        //   so we accumulate the sample position with visible extinction weight
+        //   w = T_before * (1 - T_step).
+        // Physical meaning:
+        //   Dense segments closer to the viewer contribute more to what the pixel sees and should
+        //   dominate reprojection. Empty air must not shift the guide position.
+        // Principle:
+        //   This uses extinction contribution instead of the old unconditional transmittance sum,
+        //   which averaged through empty intervals and produced invalid world guides for sky pixels.
+        // Why it exists:
+        //   Temporal reprojection needs a cloud-owned position signal. If no cloud is present we
+        //   explicitly leave the guide invalid so history can be rejected cleanly.
+        if (visibleExtinction > 1e-5)
+        {
+            weightedMeanPosition += stepPosition * visibleExtinction;
+            weightedMeanPositionSum += visibleExtinction;
+        }
         if (transmittance <0.03)
         {
             break;
@@ -449,7 +482,7 @@ Result Calculate(ViewRay viewRay, float2 uv,
     }
     Result res;
     res.ScatteringTransmittance = float4(scattering,transmittance);
-    res.meanPosition = rayHitPos/rayHitPosWeight;
+    res.meanPosition = weightedMeanPositionSum > 1e-5 ? weightedMeanPosition / weightedMeanPositionSum : float3(0,0,0);
     return res;
 }
 

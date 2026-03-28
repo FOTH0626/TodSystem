@@ -38,46 +38,82 @@ MonoBehaviour:
     m_Value: 7000
   CloudMapSize:
     m_OverrideState: 1
-    m_Value: 16020
+    m_Value: 14487
   RayMarchingSteps:
     m_OverrideState: 1
     m_Value: 32
   ErosionStrength:
     m_OverrideState: 1
-    m_Value: 0.275
+    m_Value: 0.218
   IsRainyCloud:
     m_OverrideState: 1
-    m_Value: 0.105
+    m_Value: 0.071
   WeatherMapScale:
     m_OverrideState: 1
-    m_Value: 6.68
+    m_Value: 2.41
   ShapeNoiseScale:
     m_OverrideState: 1
-    m_Value: 0.353
+    m_Value: 0.231
   DetailNoiseScale:
     m_OverrideState: 1
     m_Value: 0
   AmbientStrength:
     m_OverrideState: 1
-    m_Value: 0.86
+    m_Value: 0.48
   SkyAmbientStrength:
     m_OverrideState: 1
-    m_Value: 0.97
+    m_Value: 0.46
   MultiScatteringStrength:
     m_OverrideState: 1
-    m_Value: 0.83
+    m_Value: 0.21
   PowderStrength:
     m_OverrideState: 1
-    m_Value: 1.67
+    m_Value: 8
   TopOffsetDirection:
     m_OverrideState: 1
     m_Value: {x: 0.75, y: 0.62}
   TopOffsetDistance:
     m_OverrideState: 1
-    m_Value: 8000
+    m_Value: 1217
   TopShapeBlendStart:
     m_OverrideState: 1
-    m_Value: 0.235
+    m_Value: 1
   TopShapeBlendEnd:
     m_OverrideState: 1
-    m_Value: 0.579
+    m_Value: 1
+  EnableTemporalAccumulation:
+    m_OverrideState: 1
+    m_Value: 1
+  TemporalHistoryWeight:
+    m_OverrideState: 1
+    m_Value: 0.804
+  TemporalWorldPosThreshold:
+    m_OverrideState: 1
+    m_Value: 132
+  TemporalOpacityThreshold:
+    m_OverrideState: 1
+    m_Value: 0.105
+  TemporalLuminanceThreshold:
+    m_OverrideState: 1
+    m_Value: 0.44
+  TemporalClampStrength:
+    m_OverrideState: 1
+    m_Value: 0.091
+  EnableJointBilateralDenoise:
+    m_OverrideState: 1
+    m_Value: 1
+  JointBilateralRadius:
+    m_OverrideState: 1
+    m_Value: 3
+  JointBilateralSpatialSigma:
+    m_OverrideState: 1
+    m_Value: 0.758
+  JointBilateralDepthSigma:
+    m_OverrideState: 1
+    m_Value: 0.0152
+  JointBilateralOpacitySigma:
+    m_OverrideState: 1
+    m_Value: 0.022
+  JointBilateralLuminanceSigma:
+    m_OverrideState: 1
+    m_Value: 0.13
