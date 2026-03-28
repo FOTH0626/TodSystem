@@ -22,6 +22,11 @@ public class VolumetricCloudRenderPass : ScriptableRenderPass
     private static readonly int WeatherMapScale = Shader.PropertyToID("_WeatherMapScale");
     private static readonly int ShapeNoiseScale = Shader.PropertyToID("_ShapeNoiseScale");
     private static readonly int DetailNoiseScale = Shader.PropertyToID("_DetailNoiseScale");
+    private static readonly int AmbientStrength = Shader.PropertyToID("_AmbientStrength");
+    private static readonly int SkyAmbientStrength = Shader.PropertyToID("_SkyAmbientStrength");
+    private static readonly int MultiScatteringStrength = Shader.PropertyToID("_MultiScatteringStrength");
+    private static readonly int PowderSterngth = Shader.PropertyToID("_PowderSterngth");
+    private static readonly int CloudAmbientColor = Shader.PropertyToID("_CloudAmbientColor");
     
     #endregion
     
@@ -82,6 +87,16 @@ public class VolumetricCloudRenderPass : ScriptableRenderPass
         _volumetricCloudMaterial.SetFloat(WeatherMapScale, _volume.WeatherMapScale.value);
         _volumetricCloudMaterial.SetFloat(ShapeNoiseScale,_volume.ShapeNoiseScale.value);
         _volumetricCloudMaterial.SetFloat(DetailNoiseScale,_volume.DetailNoiseScale.value);
+        _volumetricCloudMaterial.SetFloat(AmbientStrength, _volume.AmbientStrength.value);
+        _volumetricCloudMaterial.SetFloat(SkyAmbientStrength, _volume.SkyAmbientStrength.value);
+        _volumetricCloudMaterial.SetFloat(MultiScatteringStrength, _volume.MultiScatteringStrength.value);
+        _volumetricCloudMaterial.SetFloat(PowderSterngth, _volume.PowderStrength.value);
+
+        Color ambientColor = (
+            RenderSettings.ambientSkyColor * 0.55f +
+            RenderSettings.ambientEquatorColor * 0.35f +
+            RenderSettings.ambientGroundColor * 0.10f) * RenderSettings.ambientIntensity;
+        _volumetricCloudMaterial.SetColor(CloudAmbientColor, ambientColor);
     }
 
     public void SetTarget(RTHandle cameraColorHandle)

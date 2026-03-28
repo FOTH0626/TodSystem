@@ -28,4 +28,12 @@ public class VolumetricCloudVolume :   VolumeComponent , IPostProcessComponent
     public  ClampedFloatParameter ShapeNoiseScale   = new (0.1f, 0.01f, 1.0f, false);
     [InspectorName("细节强度"),HideInInspector]
     public  ClampedFloatParameter DetailNoiseScale  = new (0.1f, 0.0f, 1.0f, false);
+    [InspectorName("环境光强度")]
+    public ClampedFloatParameter AmbientStrength = new(0.35f, 0.0f, 4.0f, false);
+    [InspectorName("天空环境光强度")]
+    public ClampedFloatParameter SkyAmbientStrength = new(0.6f, 0.0f, 4.0f, false);
+    [InspectorName("多重散射强度")]
+    public ClampedFloatParameter MultiScatteringStrength = new(1.15f, 0.0f, 4.0f, false);
+    [InspectorName("Powder 强度")]
+    public ClampedFloatParameter PowderStrength = new(2.0f, 0.0f, 8.0f, false);
 }

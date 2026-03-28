@@ -19,9 +19,11 @@ float _WeatherMapScale;
 float _ShapeNoiseScale;
 float _DetailNoiseScale;
 
-
-float4 _CloudAmbientColor = float4(0,0,1,1);
+float _AmbientStrength;
+float _SkyAmbientStrength;
+float _MultiScatteringStrength;
 float _PowderSterngth;
+float4 _CloudAmbientColor;
 
 CBUFFER_END
 

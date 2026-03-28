@@ -41,6 +41,7 @@
            TEXTURE2D(_aerialPerspectiveLut);
            SAMPLER(sampler_aerialPerspectiveLut);
            TEXTURE2D(_multiScatteringLut);
+           TEXTURE2D(_skyViewLut);
            
            
 
