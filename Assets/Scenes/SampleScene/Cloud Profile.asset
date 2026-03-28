@@ -38,22 +38,22 @@ MonoBehaviour:
     m_Value: 7000
   CloudMapSize:
     m_OverrideState: 1
-    m_Value: 16403
+    m_Value: 16000
   RayMarchingSteps:
     m_OverrideState: 1
     m_Value: 32
   ErosionStrength:
     m_OverrideState: 1
-    m_Value: 0.129
+    m_Value: 0.102
   IsRainyCloud:
-    m_OverrideState: 0
-    m_Value: 0
+    m_OverrideState: 1
+    m_Value: 0.07
   WeatherMapScale:
     m_OverrideState: 1
-    m_Value: 4.72
+    m_Value: 4.18
   ShapeNoiseScale:
     m_OverrideState: 1
-    m_Value: 0.167
+    m_Value: 0.106
   DetailNoiseScale:
     m_OverrideState: 1
     m_Value: 0
