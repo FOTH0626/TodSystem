@@ -1,0 +1,4 @@
+interface:
+  display_name: "Personal Coding Standards"
+  short_description: "Concise workflow, editing, review, and verification rules."
+  default_prompt: "Use $personal-coding-standards to implement, review, or explain code changes using my preferred engineering workflow."

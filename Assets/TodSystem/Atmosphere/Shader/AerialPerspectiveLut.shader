@@ -74,13 +74,12 @@
                 uv.x = fmod(uv.x, _AerialPerspectiveVoxelSize.x) / _AerialPerspectiveVoxelSize.x;
                 uv.xyz += 0.5 / _AerialPerspectiveVoxelSize.xyz;
 
-                float2 ndc = uv.xy * 2 - 1.0f;
-                // return float4(ndc,0,1);
-                float4 posCS = float4(ndc,1.0,1.0);
-                float4 viewDirVS = mul(unity_CameraInvProjection, posCS);
-                viewDirVS = normalize( (viewDirVS/viewDirVS.w));
-                float3 viewDirWS = mul((float3x3)unity_CameraToWorld, viewDirVS);
-                viewDirWS = normalize(viewDirWS);
+               float aspect = _ScreenParams.x / _ScreenParams.y;
+                float3 viewDirWS = normalize(mul(unity_CameraToWorld, float4(
+                    (uv.x * 2.0 - 1.0) * 1.0, 
+                    (uv.y * 2.0 - 1.0) / aspect, 
+                    1.0, 0.0
+                )).xyz);
                 
 
                 Light mainLight = GetMainLight();

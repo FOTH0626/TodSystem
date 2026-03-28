@@ -1,7 +1,7 @@
 ﻿#ifndef VOLUMETRIC_CLOUD_PARAMS_HLSL
 #define VOLUMETRIC_CLOUD_PARAMS_HLSL
 
-#define MAX_RAYMARCHING_STEP 32
+#define MAX_RAYMARCHING_STEP 64
 #define NORMAL_CLOUD_SIGMA_EXTINCTION 0.06
 #define RAINY_CLOUD_SIGMA_EXTINCTION 0.12
 #define MAX_SUN_RAY_MARCHING_LENGTH 1000
@@ -19,9 +19,20 @@ float _WeatherMapScale;
 float _ShapeNoiseScale;
 float _DetailNoiseScale;
 
-
-float4 _CloudAmbientColor = float4(0,0,1,1);
+float _AmbientStrength;
+float _SkyAmbientStrength;
+float _MultiScatteringStrength;
 float _PowderSterngth;
+float4 _CloudAmbientColor;
+float2 _CloudTopOffsetDirection;
+float _CloudTopOffsetDistance;
+float _CloudTopShapeBlendStart;
+float _CloudTopShapeBlendEnd;
+float _TemporalHistoryWeight;
+float _TemporalWorldPosThreshold;
+float _TemporalOpacityThreshold;
+float _TemporalLuminanceThreshold;
+float _TemporalClampStrength;
 
 CBUFFER_END
 
@@ -29,7 +40,11 @@ CBUFFER_END
 struct CloudParams
 {
    float CloudLayerLowHeight;
-   float CloudLayerHighHeight;   
+   float CloudLayerHighHeight;
+   float2 TopOffsetDirection;
+   float TopOffsetDistance;
+   float TopShapeBlendStart;
+   float TopShapeBlendEnd;
 };
 
 CloudParams GetCloudParams()
@@ -37,6 +52,10 @@ CloudParams GetCloudParams()
    CloudParams output;
    output.CloudLayerLowHeight = _CloudLayerLowHeight;
    output.CloudLayerHighHeight = _CloudLayerHighHeight;
+   output.TopOffsetDirection = _CloudTopOffsetDirection;
+   output.TopOffsetDistance = _CloudTopOffsetDistance;
+   output.TopShapeBlendStart = _CloudTopShapeBlendStart;
+   output.TopShapeBlendEnd = _CloudTopShapeBlendEnd;
    return output;
 }
 

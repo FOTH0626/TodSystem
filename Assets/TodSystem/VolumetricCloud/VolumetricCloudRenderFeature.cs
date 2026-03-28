@@ -18,19 +18,21 @@ public class VolumetricCloudRenderFeature : ScriptableRendererFeature
             Debug.LogWarning("Volumetric Cloud Material is null");
             return;
         }
+        _volume = VolumeManager.instance.stack?.GetComponent<VolumetricCloudVolume>();
+
         _pass ??= new VolumetricCloudRenderPass(volumetricCloudMat, _volume)
         {
             renderPassEvent = RenderPassEvent.AfterRenderingSkybox
         };
-        _volume = VolumeManager.instance.stack?.GetComponent<VolumetricCloudVolume>();
-
         _pass.Set(volumetricCloudMat, _volume);
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
         if (_pass == null)
-            Debug.LogWarning("Volumetric Cloud Pass is null");
+        {
+            return;
+        }
 
         if (renderingData.cameraData.cameraType != CameraType.Game && renderingData.cameraData.cameraType != CameraType.SceneView)
         {
@@ -42,11 +44,15 @@ public class VolumetricCloudRenderFeature : ScriptableRendererFeature
             return;
         }
 
-        if (!_volume.IsActive())
+        _volume = VolumeManager.instance.stack?.GetComponent<VolumetricCloudVolume>();
+        if (_volume == null || !_volume.IsActive())
         {
+            _pass.ResetCameraHistory(renderingData.cameraData.camera);
             return;
         }
-        
+
+        _pass.Set(volumetricCloudMat, _volume);
+
         renderer.EnqueuePass(_pass);
     }
 
@@ -57,12 +63,7 @@ public class VolumetricCloudRenderFeature : ScriptableRendererFeature
 
     protected override void Dispose(bool disposing)
     {
-        if (volumetricCloudMat != null)
-        {
-            DestroyImmediate(volumetricCloudMat);
-            volumetricCloudMat = null;
-        }
-        _pass.Dispose();
+        _pass?.Dispose();
         _pass = null;
     }
 
